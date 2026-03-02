@@ -12,6 +12,16 @@ A collection of custom skills for AI coding assistants (like Claude Code, GitHub
 
 ## Installation
 
+### Option 1: Install All Skills
+```bash
+npx skills add trfi/skills
+```
+
+### Option 2: Install Specific Skills
+```bash
+npx skills add trfi/skills@cv-resume
+```
+
 ### Manual Installation
 Copy the skills you want to your agent's skills directory:
 
