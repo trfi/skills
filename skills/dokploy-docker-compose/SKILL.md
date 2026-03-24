@@ -7,7 +7,7 @@ description: >
   Dokploy. Covers both Compose (stack) and Application (Git) deployment types, volume strategies,
   networking, environment variables, init containers, healthchecks, domains with Traefik, and troubleshooting
   common errors like EAI_AGAIN, permission denied, unhealthy containers, and JWT/config issues. Also applies
-  when deploying specific apps like LibreChat, SigNoz, or any multi-service Docker Compose stack to Dokploy.
+  when deploying any multi-service Docker Compose stack to Dokploy.
 ---
 
 # Dokploy Docker Compose Deployment Skill
