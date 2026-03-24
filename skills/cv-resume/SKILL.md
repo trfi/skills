@@ -131,7 +131,7 @@ This is a designed artifact. It must be **visually exceptional**. Think: design 
 </ul>
 ```
 ```css
-.skill-tags { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; }
+.skill-tags { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; padding: 0; margin: 0; }
 .skill-tags li { background: var(--accent-light); color: var(--accent-dark);
   padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; }
 ```
@@ -141,8 +141,8 @@ Always include:
 ```css
 @media print {
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  body { margin: 0; padding: 0; background: white; }
-  .resume { box-shadow: none; max-width: 100%; }
+  body { background: var(--bg); color: var(--text); }
+  .resume { box-shadow: none; margin: 0; border: none; max-width: 100%; }
 }
 @page { margin: 0; size: A4; }
 ```

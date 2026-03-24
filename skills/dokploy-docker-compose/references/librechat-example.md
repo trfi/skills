@@ -1,0 +1,212 @@
+# LibreChat Deployment on Dokploy
+
+## Architecture Overview
+
+LibreChat is a multi-service stack:
+- `api` (LibreChat Node.js backend) — main app, port 3080
+- `mongodb` — database, container_name: `chat-mongodb`
+- `meilisearch` — search engine
+- `vectordb` (pgvector/postgresql) — for RAG features
+- `rag_api` (Python) — retrieval-augmented generation
+
+## Complete docker-compose.yml for Dokploy
+
+```yaml
+services:
+  api:
+    container_name: LibreChat
+    image: ghcr.io/danny-avila/librechat-dev:latest
+    restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rag_api:
+        condition: service_started
+    environment:
+      - HOST=0.0.0.0
+      - NODE_ENV=production
+      - MONGO_URI=${MONGO_URI:-mongodb://chat-mongodb:27017/LibreChat}
+      - MEILI_HOST=http://meilisearch:7700
+      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY}
+      - RAG_PORT=${RAG_PORT:-8000}
+      - RAG_API_URL=http://rag_api:${RAG_PORT:-8000}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+      - CREDS_KEY=${CREDS_KEY}
+      - CREDS_IV=${CREDS_IV}
+    volumes:
+      - librechat-images:/app/client/public/images
+      - librechat-uploads:/app/uploads
+      - librechat-logs:/app/logs
+    networks:
+      - librechat-net
+
+  mongodb:
+    container_name: chat-mongodb
+    image: mongo:8.0.17
+    restart: always
+    command: mongod --noauth
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    volumes:
+      - mongodb-data:/data/db
+    networks:
+      - librechat-net
+
+  meilisearch:
+    container_name: chat-meilisearch
+    image: getmeili/meilisearch:v1.12.3
+    restart: always
+    environment:
+      - MEILI_HOST=http://meilisearch:7700
+      - MEILI_NO_ANALYTICS=true
+      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY}
+    volumes:
+      - meilisearch-data:/meili_data
+    networks:
+      - librechat-net
+
+  vectordb:
+    container_name: vectordb
+    image: pgvector/pgvector:0.8.0-pg15-trixie
+    restart: always
+    environment:
+      POSTGRES_DB: mydatabase
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+    volumes:
+      - vectordb-data:/var/lib/postgresql/data
+    networks:
+      - librechat-net
+
+  rag_api:
+    container_name: rag_api
+    image: ghcr.io/danny-avila/librechat-rag-api-dev-lite:latest
+    restart: always
+    depends_on:
+      - vectordb
+    environment:
+      - DB_HOST=vectordb
+      - RAG_PORT=${RAG_PORT:-8000}
+      - JWT_SECRET=${JWT_SECRET}
+    networks:
+      - librechat-net
+
+networks:
+  librechat-net:
+    driver: bridge
+
+volumes:
+  librechat-images:
+  librechat-uploads:
+  librechat-logs:
+  mongodb-data:
+  meilisearch-data:
+  vectordb-data:
+```
+
+## Required Environment Variables (Dokploy Environment Tab)
+
+```
+# JWT — required, app crashes without these
+JWT_SECRET=<run: openssl rand -hex 32>
+JWT_REFRESH_SECRET=<run: openssl rand -hex 32>
+
+# Encryption keys — exact lengths required
+CREDS_KEY=<exactly 64 hex chars — run: openssl rand -hex 32>
+CREDS_IV=<exactly 32 hex chars — run: openssl rand -hex 16>
+
+# Meilisearch
+MEILI_MASTER_KEY=<any random string>
+
+# MongoDB (override if using container_name)
+MONGO_URI=mongodb://chat-mongodb:27017/LibreChat
+```
+
+**CREDS_KEY and CREDS_IV explained:**
+- Used to AES-encrypt user API keys (OpenAI, Claude, etc.) before storing in MongoDB
+- If lost, all stored API keys become unreadable — users must re-enter them
+- Never change these after users have saved keys
+- CREDS_KEY = 64 hex chars (32 bytes) — AES-256 key
+- CREDS_IV = 32 hex chars (16 bytes) — initialization vector
+
+## Domain/Port Setup
+
+In Dokploy → Domains tab of the `api` service (or stack):
+- **Container Port**: `3080`
+- This is the LibreChat web UI port
+
+## librechat.yaml Config File
+
+LibreChat requires a config file at `/app/librechat.yaml`. Without it, you get:
+```
+error: Config file YAML format is invalid: ENOENT: no such file or directory, open '/app/librechat.yaml'
+```
+(Note: this error does not crash the app if JWT is set — it's a warning)
+
+**Option A — File Mount in Dokploy:**
+Advanced → Volumes → File Mount:
+- **Content**: (paste YAML below)
+- **File Path**: `librechat.yaml`
+- **Mount Path**: `/app/librechat.yaml`
+
+**Option B — Bind mount from VPS:**
+```bash
+# SSH into VPS
+nano /etc/dokploy/librechat.yaml
+# paste config
+```
+Then in Compose YAML volumes section of `api` service:
+```yaml
+- /etc/dokploy/librechat.yaml:/app/librechat.yaml
+```
+
+**Minimal librechat.yaml content:**
+```yaml
+version: 1.2.1
+cache: true
+# Add model endpoints here as needed
+# See: https://www.librechat.ai/docs/configuration/librechat_yaml
+```
+
+## Creating the First Admin Account
+
+LibreChat has no default admin credentials. The **first registered user becomes Admin**.
+
+**Method 1 — Register via UI:**
+1. Open LibreChat URL
+2. Click "Sign up" / "Don't have an account?"
+3. Register — this account is now Admin
+
+**Method 2 — CLI (if registration is disabled):**
+```bash
+docker exec -it LibreChat npm run create-user
+```
+
+**Security:** After creating admin, go to Settings → disable "Allow Registration" to prevent
+unauthorized signups.
+
+## Common Errors
+
+### `JwtStrategy requires a secret or key`
+→ JWT_SECRET not in environment OR env var not passed to container
+→ Make sure compose YAML has `- JWT_SECRET=${JWT_SECRET}` in environment block
+→ Must **Redeploy** (not just Restart) after adding env vars
+
+### `getaddrinfo EAI_AGAIN mongodb`
+→ Race condition — api started before mongodb was ready
+→ Fix: add `healthcheck` to mongodb and `depends_on: condition: service_healthy` to api
+→ Or: try changing `MONGO_URI` to use `chat-mongodb` (container_name) instead of `mongodb`
+
+### `EACCES permission denied` on uploads/logs
+→ Remove `user: "${UID}:${GID}"` from compose — let Docker run as root
+
+### RAG API warning on startup
+→ Normal if app just restarted — rag_api starts slower than api
+→ Disappears after ~30-60 seconds once all services are up

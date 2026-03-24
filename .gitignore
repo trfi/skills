@@ -1,0 +1,12 @@
+# AI agent config directories (local only)
+.agent/
+.agents/
+.claude/
+.cursor/
+.gemini/
+.github/skills/
+.opencode/
+.qoder/
+.qwen/
+.trae/
+.vscode/
