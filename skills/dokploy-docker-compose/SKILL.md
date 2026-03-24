@@ -52,7 +52,7 @@ Steps: Create Service → Application → Source: Git → Build Type: Dockerfile
 
 ## Part 2: Volume Strategy
 
-**Critical Dokploy rule:** Absolute host paths (e.g., `/opt/myapp/`) are **cleaned up during deployments**. Never use them. Use the `../files/` folder or named volumes instead.
+⚠️ **Critical Dokploy rule:** Absolute host paths (e.g., `/opt/myapp/`) are **cleaned up during deployments**. Never use them. Use the `../files/` folder or named volumes instead.
 
 ### Named Volumes (Best for databases and large data)
 ```yaml
@@ -71,12 +71,22 @@ Docker manages these. Supports **automated backups** via Dokploy's Volume Backup
 Dokploy provides a persistent `../files/` folder that survives deployments:
 ```yaml
 volumes:
-  - ../files/my-config:/etc/myapp/config    persists across deploys
-  - ../files/my-database:/var/lib/mysql     persists across deploys
-  - ./config.yaml:/app/config.yaml          wiped on each AutoDeploy (git clone)
-  - /opt/myapp/data:/app/data               absolute paths are cleaned up by Dokploy
+  - ../files/my-config:/etc/myapp/config    ✅ persists across deploys
+  - ../files/my-database:/var/lib/mysql     ✅ persists across deploys
+  - ./config.yaml:/app/config.yaml          ❌ wiped on each AutoDeploy (git clone)
+  - /opt/myapp/data:/app/data               ❌ absolute paths are cleaned up by Dokploy
 ```
 No direct host file access needed. Best for config files, small datasets. No backup support.
+
+**Host path on the VPS:** `../files/` maps to a `files/` folder inside Dokploy's project directory on the host. To find the exact path after first deploy, SSH in and run:
+```bash
+# Step 1: find your container name (Dokploy names them <stack>-<service>-1)
+docker ps --format "table {{.Names}}\t{{.Image}}" | grep <service-keyword>
+
+# Step 2: inspect that container to see where ../files/ maps on the host
+docker inspect <container-name> | grep -A2 '"Source"'
+```
+Or check the **Docker tab** in the Dokploy UI — the container name is listed there directly.
 
 ### File Mounts (Dokploy UI — for pasting config content directly)
 In **Advanced → Mounts → Add Mount → File Mount**:
@@ -84,8 +94,8 @@ In **Advanced → Mounts → Add Mount → File Mount**:
 - **File Path**: just the filename (e.g., `config.yaml`)
 - **Mount Path**: full container path (e.g., `/app/config/config.yaml`)
 
-Best for: config files you want to manage entirely in Dokploy UI
-Not for: binary files, files needing runtime generation, files > a few KB
+✅ Best for: config files you want to manage entirely in Dokploy UI
+❌ Not for: binary files, files needing runtime generation, files > a few KB
 
 ### Init Container Pattern (for complex stacks needing generated configs)
 When a stack needs multiple config files written at runtime, or binary downloads, use an alpine init
@@ -130,7 +140,7 @@ See `references/init-container-patterns.md` for complete examples.
 | Config file — manage in UI | File Mount |
 | Config file — large or complex | `../files/` bind mount |
 | Generated configs + binaries | Init container → named volume |
-| Do NOT use | Absolute host paths, `./` relative paths |
+| ❌ Do NOT use | Absolute host paths, `./` relative paths |
 
 ---
 
@@ -159,7 +169,7 @@ services:
       - PORT=3000                   # hardcoded values also work
 ```
 
-If you use `environment:` with explicit variables, only those listed variables are passed.
+⚠️ If you use `environment:` with explicit variables, only those listed variables are passed.
 Any variable set in the UI but not listed here will be silently ignored.
 
 **Recommendation:** For stacks with many secrets (LibreChat, etc.) use `env_file: - .env` on each
@@ -240,7 +250,7 @@ private network instead of sharing `dokploy-network`. This is:
 When Isolated Deployments is enabled, you don't need to add `dokploy-network` manually.
 All open-source templates shipped with Dokploy have this enabled by default.
 
-If NOT using Isolated Deployments, only the domain-targeted service gets `dokploy-network`
+⚠️ If NOT using Isolated Deployments, only the domain-targeted service gets `dokploy-network`
 added automatically. Other services in the stack won't be on that network unless you add it manually.
 
 ---
@@ -281,49 +291,29 @@ services:
     networks: [app-net]
 ```
 
-Avoid using `container_name:` as a DNS workaround — it breaks Dokploy monitoring features.
+⚠️ Avoid using `container_name:` as a DNS workaround — it breaks Dokploy monitoring features.
 Use service names for inter-container communication instead.
 
 ---
 
-## Part 6: Healthchecks Reference
+## Part 6: Healthchecks
 
+Add a `healthcheck` to every dependency service (databases, caches, queues). Pair it with `depends_on: condition: service_healthy` on services that need them — this prevents race conditions where a service starts before its dependency is ready.
+
+**Example:**
 ```yaml
-# MongoDB
-healthcheck:
-  test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-  interval: 10s
-  timeout: 5s
-  retries: 5
-  start_period: 10s
-
-# PostgreSQL
-healthcheck:
-  test: ["CMD-SHELL", "pg_isready -U postgres"]
-  interval: 10s
-  timeout: 5s
-  retries: 5
-
-# ClickHouse
-healthcheck:
-  test: ["CMD", "wget", "--spider", "-q", "0.0.0.0:8123/ping"]
-  interval: 30s
-  timeout: 5s
-  retries: 3
-
-# Zookeeper (signoz/zookeeper image — AdminServer API on port 8080)
-healthcheck:
-  test: ["CMD-SHELL", "curl -s -m 2 http://localhost:8080/commands/ruok | grep error | grep null"]
-  interval: 30s
-  timeout: 5s
-  retries: 3
-
-# Zookeeper (bitnami image — nc on port 2181)
-healthcheck:
-  test: ["CMD-SHELL", "echo ruok | nc -w 2 127.0.0.1 2181 | grep imok"]
-  interval: 30s
-  timeout: 5s
-  retries: 3
+services:
+  postgres:
+    image: postgres:16
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  app:
+    depends_on:
+      postgres:
+        condition: service_healthy
 ```
 
 ---
@@ -363,6 +353,7 @@ healthcheck:
 - `references/librechat-example.md` — LibreChat: JWT secrets, MongoDB DNS, librechat.yaml mounting
 - `references/signoz-example.md` — SigNoz: init containers, ClickHouse, Zookeeper migration
 - `references/init-container-patterns.md` — init container patterns with heredocs and binary downloads
+- `references/healthchecks.md` — healthcheck snippets for common services
 
 ---
 

@@ -4,7 +4,7 @@
 
 LibreChat is a multi-service stack:
 - `api` (LibreChat Node.js backend) — main app, port 3080
-- `mongodb` — database, container_name: `chat-mongodb`
+- `mongodb` — database
 - `meilisearch` — search engine
 - `vectordb` (pgvector/postgresql) — for RAG features
 - `rag_api` (Python) — retrieval-augmented generation
@@ -117,9 +117,6 @@ CREDS_IV=<exactly 32 hex chars — run: openssl rand -hex 16>
 
 # Meilisearch
 MEILI_MASTER_KEY=<any random string>
-
-# MongoDB (override if using container_name)
-MONGO_URI=mongodb://chat-mongodb:27017/LibreChat
 ```
 
 **CREDS_KEY and CREDS_IV explained:**
