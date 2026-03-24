@@ -5,36 +5,43 @@ description: >
   Use this skill whenever the user mentions Dokploy, deploying Docker Compose to a VPS, deploying applications
   with docker-compose.yml on a self-hosted server, or when troubleshooting Docker Compose stacks running on
   Dokploy. Covers both Compose (stack) and Application (Git) deployment types, volume strategies,
-  networking, environment variables, init containers, healthchecks, and troubleshooting common errors
-  like EAI_AGAIN, permission denied, unhealthy containers, and JWT/config issues. Also applies when
-  deploying specific apps like LibreChat, SigNoz, or any multi-service Docker Compose stack to Dokploy.
+  networking, environment variables, init containers, healthchecks, domains with Traefik, and troubleshooting
+  common errors like EAI_AGAIN, permission denied, unhealthy containers, and JWT/config issues. Also applies
+  when deploying specific apps like LibreChat, SigNoz, or any multi-service Docker Compose stack to Dokploy.
 ---
 
 # Dokploy Docker Compose Deployment Skill
 
 ## Overview
 
-Dokploy is a self-hosted deployment platform that manages Docker containers on a VPS. It has two primary
-service types and requires specific patterns to work reliably. Always read this skill before generating
-any Docker Compose configurations for Dokploy.
+Dokploy is a self-hosted deployment platform that manages Docker containers on a VPS. It supports two
+compose modes (Docker Compose and Docker Stack) and requires specific patterns to work reliably.
 
 **Quick decision tree:**
 - Single-repo app with `Dockerfile`? → **Application (Git)** deployment
 - Pre-built images or multi-service stack? → **Compose** deployment
-- Need to mount config files without SSH? → **File Mounts** in Advanced tab
+- Need a public HTTPS domain? → **Domains tab** (Dokploy auto-injects Traefik labels)
+- Need isolated networking per-app? → Enable **Isolated Deployments** in UI
+- Config files needed without SSH? → **File Mounts** in Advanced → Mounts
 - Complex stack needing generated configs + binary downloads? → **Init Containers** pattern
 
 ---
 
 ## Part 1: Service Types
 
-### Compose (Stack) Deployment
-Best for: multi-service stacks (databases, caches, search engines, etc.) using pre-built images.
+### Compose (Docker Compose mode)
+Best for: multi-service stacks using pre-built images. Standard `docker compose up` behavior.
 
-Key constraints vs local Docker Compose:
-- **No relative bind mounts** (e.g., `./config.yaml`) — Dokploy's build directory is ephemeral
-- Relative paths like `- type: bind, source: ./.env` will fail or mount empty directories
-- Use **named volumes** and **File Mounts** instead
+Key constraints vs running locally:
+- Each deploy via AutoDeploy does a **`git clone`** which clears the repository directory — any relative path like `./config.yaml` will be **empty or missing** after the first push
+- Never use `container_name:` on services — it breaks Dokploy's logs, metrics, and monitoring features
+- Relative bind mounts (`./data`) work only on first deploy; use `../files/` or named volumes instead
+
+### Stack (Docker Swarm mode)
+Docker Stack mode for orchestrated deployments. Key differences from Compose mode:
+- **No `build:` directive** — must use pre-built images from a registry
+- Traefik labels must go under **`deploy.labels`**, not directly under `labels`
+- Add `--with-registry-auth` flag in Advanced → Command if using private registries with replicas
 
 ### Application (Git) Deployment
 Best for: source code you build from a Dockerfile.
@@ -45,44 +52,48 @@ Steps: Create Service → Application → Source: Git → Build Type: Dockerfile
 
 ## Part 2: Volume Strategy
 
-This is the most critical decision when adapting any docker-compose.yml for Dokploy.
+**Critical Dokploy rule:** Absolute host paths (e.g., `/opt/myapp/`) are **cleaned up during deployments**. Never use them. Use the `../files/` folder or named volumes instead.
 
-### Named Volumes (Recommended for persistent data)
+### Named Volumes (Best for databases and large data)
+```yaml
+services:
+  db:
+    image: postgres:16
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+volumes:
+  db-data:
+```
+Docker manages these. Supports **automated backups** via Dokploy's Volume Backups feature. Best for databases, large datasets.
+
+### `../files/` Bind Mounts (Best for config files and small data)
+Dokploy provides a persistent `../files/` folder that survives deployments:
 ```yaml
 volumes:
-  myapp-data:        # declared at bottom
-
-services:
-  app:
-    volumes:
-      - myapp-data:/app/data   # named volume
+  - ../files/my-config:/etc/myapp/config    persists across deploys
+  - ../files/my-database:/var/lib/mysql     persists across deploys
+  - ./config.yaml:/app/config.yaml          wiped on each AutoDeploy (git clone)
+  - /opt/myapp/data:/app/data               absolute paths are cleaned up by Dokploy
 ```
-Docker manages these. Data persists across redeploys. Safe for databases, uploads, logs.
+No direct host file access needed. Best for config files, small datasets. No backup support.
 
-### File Mounts (Dokploy UI feature — for config files)
-In **Advanced → Volumes → Add Volume → File Mount**:
+### File Mounts (Dokploy UI — for pasting config content directly)
+In **Advanced → Mounts → Add Mount → File Mount**:
 - **Content**: paste the file text
 - **File Path**: just the filename (e.g., `config.yaml`)
 - **Mount Path**: full container path (e.g., `/app/config/config.yaml`)
 
-✅ Best for: small config files (nginx.conf, app config YAML, librechat.yaml)
-❌ Not for: binary files, files > a few KB, or files needing runtime generation
+Best for: config files you want to manage entirely in Dokploy UI
+Not for: binary files, files needing runtime generation, files > a few KB
 
-### Bind Mounts (VPS Host Path)
-```yaml
-volumes:
-  - /opt/myapp/data:/app/data   # absolute host path
-```
-Requires SSH to create the directory first. Use for large files or files managed outside Dokploy.
-Switch to "Bind Mount" tab in Dokploy's Volume UI.
-
-### Init Container Pattern (for complex stacks)
-When a stack needs multiple config files, binary downloads, or runtime-generated content, use an
-alpine init container that writes files into a shared named volume:
+### Init Container Pattern (for complex stacks needing generated configs)
+When a stack needs multiple config files written at runtime, or binary downloads, use an alpine init
+container that writes files into a shared named volume before the main service starts:
 
 ```yaml
 services:
-  my-conf:          # init container
+  my-conf:
     image: alpine:3.20
     command:
       - /bin/sh
@@ -91,56 +102,164 @@ services:
         cat > /config/app.yaml <<'YAML'
         key: value
         YAML
-        
-        # Download binaries if needed
-        apk add --no-cache wget tar
-        wget -O /scripts/tool.tar.gz "https://github.com/..."
-        tar -xzf /tmp/tool.tar.gz -C /scripts/
+        apk add --no-cache wget && wget -O /scripts/tool "https://..."
     volumes:
       - app-config:/config
       - app-scripts:/scripts
-    restart: "no"   # IMPORTANT: exits after running
+    restart: "no"   # MUST exit after running
 
   app:
     depends_on:
       my-conf:
-        condition: service_completed_successfully   # waits for init to finish
+        condition: service_completed_successfully
     volumes:
       - app-config:/etc/app/
       - app-scripts:/usr/local/scripts/
 ```
 
-**Shell escaping in init containers:** Use `$$` to escape `$` in heredocs so Docker doesn't
-interpolate them as environment variables:
-```bash
-node_os=$$(uname -s | tr '[:upper:]' '[:lower:]')
-```
+**Shell escaping:** Use `$$` inside compose heredocs — `$$(uname -s)` not `$(uname -s)`.
 
 See `references/init-container-patterns.md` for complete examples.
 
+### Choosing the Right Volume Method
+
+| Need | Method |
+|------|--------|
+| Database data | Named volume |
+| Automated backups to S3 | Named volume (only option) |
+| Config file — manage in UI | File Mount |
+| Config file — large or complex | `../files/` bind mount |
+| Generated configs + binaries | Init container → named volume |
+| Do NOT use | Absolute host paths, `./` relative paths |
+
 ---
 
-## Part 3: Networking & DNS
+## Part 3: Environment Variables
 
-### The EAI_AGAIN / DNS Resolution Problem
+### How Dokploy handles env vars
+Variables set in the **Environment tab** are written to a `.env` file in the same directory as
+`docker-compose.yml`. They are **NOT automatically injected** into containers. You must explicitly
+load them in your compose YAML using one of two approaches:
 
-The most common Dokploy error for multi-service stacks:
+**Option A — Load all variables (simpler for many vars):**
+```yaml
+services:
+  app:
+    env_file:
+      - .env        # loads every variable from Dokploy's Environment tab
+```
+
+**Option B — Select specific variables:**
+```yaml
+services:
+  app:
+    environment:
+      - JWT_SECRET=${JWT_SECRET}
+      - DATABASE_URL=${DATABASE_URL}
+      - PORT=3000                   # hardcoded values also work
+```
+
+If you use `environment:` with explicit variables, only those listed variables are passed.
+Any variable set in the UI but not listed here will be silently ignored.
+
+**Recommendation:** For stacks with many secrets (LibreChat, etc.) use `env_file: - .env` on each
+service that needs them. For stacks where services need different subsets, use explicit `${VAR}` refs.
+
+### Generate secure values
+```bash
+openssl rand -hex 32    # 64-char hex string (for keys like CREDS_KEY)
+openssl rand -hex 16    # 32-char hex string (for IVs like CREDS_IV)
+```
+
+---
+
+## Part 4: Domains & Traefik Routing
+
+Dokploy uses Traefik as a reverse proxy. There are two ways to expose services via a domain.
+
+### Method 1: Dokploy Domains UI (Recommended — since v0.7.0)
+Go to your service → **Domains tab** → **Add Domain**. Dokploy **automatically injects** the
+correct Traefik labels into your compose file at deploy time. You never touch the labels manually.
+
+- Use `expose:` (not `ports:`) in your compose YAML when routing via domain
+- Use **Preview Compose** button to see the final compose file with auto-injected labels
+
+```yaml
+services:
+  app:
+    image: myapp:latest
+    expose:
+      - 3000    # container-only; Traefik routes via domain, no host port needed
+```
+
+### Method 2: Manual Traefik Labels (Advanced)
+For fine-grained control, add labels directly in your compose file. Requires connecting to
+`dokploy-network` (the shared Traefik network):
+
+```yaml
+services:
+  frontend:
+    image: myapp:latest
+    expose:
+      - 3000
+    networks:
+      - dokploy-network
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.my-unique-name.rule=Host(`app.yourdomain.com`)
+      - traefik.http.routers.my-unique-name.entrypoints=websecure
+      - traefik.http.routers.my-unique-name.tls.certResolver=letsencrypt
+      - traefik.http.services.my-unique-name.loadbalancer.server.port=3000
+
+networks:
+  dokploy-network:
+    external: true
+```
+
+**For Docker Stack** — labels go under `deploy.labels`:
+```yaml
+services:
+  frontend:
+    image: myapp:latest
+    deploy:
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.my-app.rule=Host(`app.yourdomain.com`)
+        - traefik.http.services.my-app.loadbalancer.server.port=3000
+    networks:
+      - dokploy-network
+```
+
+### Isolated Deployments
+Enable this in the Dokploy UI (toggle on the Compose service page) to give your stack its own
+private network instead of sharing `dokploy-network`. This is:
+- Required when running **multiple instances** of the same app (e.g., two WordPress sites)
+- Safer — services aren't visible across other stacks
+- Automatic — Dokploy handles all network creation and Traefik wiring
+
+When Isolated Deployments is enabled, you don't need to add `dokploy-network` manually.
+All open-source templates shipped with Dokploy have this enabled by default.
+
+If NOT using Isolated Deployments, only the domain-targeted service gets `dokploy-network`
+added automatically. Other services in the stack won't be on that network unless you add it manually.
+
+---
+
+## Part 5: Networking & DNS (EAI_AGAIN Fix)
+
+The most common multi-service error:
 ```
 getaddrinfo EAI_AGAIN mongodb
 ```
+Container can't resolve another service's hostname. Causes: race condition or DNS confusion.
 
-This means a service can't resolve the hostname of another service. Causes:
-1. Container started before dependency was ready (race condition)
-2. Docker DNS confusion between service name vs container name
-
-**Fix 1: Use `depends_on` with healthchecks** (prevents race conditions)
+**Fix 1 — Healthchecks + proper `depends_on`** (prevents race conditions):
 ```yaml
 services:
   api:
     depends_on:
       mongodb:
-        condition: service_healthy   # not just service_started
-
+        condition: service_healthy    # waits until healthy, not just started
   mongodb:
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
@@ -149,67 +268,25 @@ services:
       start_period: 10s
 ```
 
-**Fix 2: Use explicit custom network** (guarantees service-name DNS)
+**Fix 2 — Explicit custom network** (guarantees DNS between services):
 ```yaml
-services:
-  api:
-    networks:
-      - app-net
-  mongodb:
-    networks:
-      - app-net
-
 networks:
   app-net:
     driver: bridge
-```
 
-**Fix 3: Use container_name in connection strings**
-If service name `mongodb` doesn't resolve, try the `container_name: chat-mongodb` instead:
-```
-MONGO_URI=mongodb://chat-mongodb:27017/dbname
-```
-
-Docker DNS resolves `container_name` more reliably than service name in some Dokploy configurations.
-
----
-
-## Part 4: Environment Variables
-
-### Injecting env vars into Compose services
-In Dokploy's **Environment tab**, set key=value pairs. In your compose YAML, reference them:
-
-```yaml
 services:
   api:
-    environment:
-      - JWT_SECRET=${JWT_SECRET}          # pulls from Dokploy env tab
-      - MONGO_URI=${MONGO_URI}
-      - PORT=3000                         # hardcoded
+    networks: [app-net]
+  mongodb:
+    networks: [app-net]
 ```
 
-**Critical:** If you list `environment:` with specific variables, any variable NOT listed will
-be ignored even if set in Dokploy's Environment tab. Either:
-- List every variable explicitly: `- JWT_SECRET=${JWT_SECRET}`
-- Or use `env_file` with a `.env` file mount
-
-### Common required secrets pattern
-For apps like LibreChat that need many secrets, always include in Environment tab:
-```
-JWT_SECRET=<random 32+ char string>
-JWT_REFRESH_SECRET=<random 32+ char string>
-CREDS_KEY=<exactly 64 hex chars>
-CREDS_IV=<exactly 32 hex chars>
-MEILI_MASTER_KEY=<random string>
-```
-
-Generate secure values: `openssl rand -hex 32`
+Avoid using `container_name:` as a DNS workaround — it breaks Dokploy monitoring features.
+Use service names for inter-container communication instead.
 
 ---
 
-## Part 5: Healthchecks & Startup Order
-
-Always add healthchecks to databases and slow-starting services:
+## Part 6: Healthchecks Reference
 
 ```yaml
 # MongoDB
@@ -220,6 +297,13 @@ healthcheck:
   retries: 5
   start_period: 10s
 
+# PostgreSQL
+healthcheck:
+  test: ["CMD-SHELL", "pg_isready -U postgres"]
+  interval: 10s
+  timeout: 5s
+  retries: 5
+
 # ClickHouse
 healthcheck:
   test: ["CMD", "wget", "--spider", "-q", "0.0.0.0:8123/ping"]
@@ -227,14 +311,14 @@ healthcheck:
   timeout: 5s
   retries: 3
 
-# Zookeeper (signoz/zookeeper image — uses AdminServer API on port 8080)
+# Zookeeper (signoz/zookeeper image — AdminServer API on port 8080)
 healthcheck:
   test: ["CMD-SHELL", "curl -s -m 2 http://localhost:8080/commands/ruok | grep error | grep null"]
   interval: 30s
   timeout: 5s
   retries: 3
 
-# Zookeeper (bitnami image — uses nc on port 2181)
+# Zookeeper (bitnami image — nc on port 2181)
 healthcheck:
   test: ["CMD-SHELL", "echo ruok | nc -w 2 127.0.0.1 2181 | grep imok"]
   interval: 30s
@@ -244,41 +328,16 @@ healthcheck:
 
 ---
 
-## Part 6: Ports & Domains
-
-### Port configuration
-```yaml
-ports:
-  - "8080:8080"    # host:container — exposes to internet
-```
-In Dokploy UI (Advanced → Ports):
-- **Published Port**: host port (external)
-- **Target Port**: container port (internal)
-- **Mode**: Host
-- **Protocol**: TCP
-
-### Domain mapping (for HTTPS with Traefik)
-After deploy → go to service → **Domains** tab:
-- Add your domain (e.g., `app.yourdomain.com`)
-- **Container Port**: the internal port the app listens on
-- Enable HTTPS (Let's Encrypt) if needed
-- When using a domain, you typically do NOT also need a published port
-
----
-
 ## Part 7: Updating Deployed Services
 
-### Manual update (for stacks using public repos you don't own)
-1. Go to Dokploy Dashboard → your service
-2. Click **Deploy** button
-3. If nothing changed (Docker cache): look for "Redeploy without Cache" or clear Build Cache in System Settings
+### Manual update (public repos you don't own)
+1. Go to Deployments tab → Click **Deploy**
+2. If Docker cache is stale: look for "Redeploy without Cache" or clear Build Cache in System Settings
 
-### Automatic updates (requires owning the repo)
-1. Fork the repository
-2. Update service to point to your fork
-3. Copy Webhook URL from Deployments tab
-4. Add webhook to GitHub repo Settings → Webhooks
-5. Future pushes to your fork trigger auto-deploy
+### Automatic updates via Webhook
+1. Copy Webhook URL from **Deployments tab**
+2. Add it to your GitHub/GitLab/Gitea repo Settings → Webhooks
+3. Every push to the branch triggers an automatic deploy
 
 ---
 
@@ -286,38 +345,37 @@ After deploy → go to service → **Domains** tab:
 
 | Error | Cause | Fix |
 |-------|-------|-----|
-| `getaddrinfo EAI_AGAIN <hostname>` | DNS resolution failure / race condition | Add healthcheck + `depends_on: condition: service_healthy`; use container_name in URI; add custom network |
-| `JwtStrategy requires a secret or key` | JWT env var not set or not passed to container | Add `JWT_SECRET=${JWT_SECRET}` to environment block; Redeploy (not just Restart) |
-| `ENOENT: no such file or directory, open '/app/config.yaml'` | Config file not mounted | Use File Mount in Advanced → Volumes, or init container pattern |
-| `permission denied` on volumes | Old volume data owned by different user | Rename volume in YAML (e.g., `data-v2`) to force fresh creation; or `docker volume rm` via SSH |
-| Container `is unhealthy` | Healthcheck command wrong for image | Check which healthcheck method the image supports; see Part 5 |
-| `cannot create agent without orgId` (SigNoz) | Normal on first startup before org is created | Access UI → complete org setup → error disappears automatically |
-| `Config file YAML format is invalid: ENOENT` (LibreChat) | librechat.yaml not mounted | Create via SSH + bind mount, or File Mount in Dokploy Advanced |
+| `getaddrinfo EAI_AGAIN <hostname>` | Race condition / DNS | Add healthcheck + `condition: service_healthy`; use custom network |
+| Config file empty after redeploy | `./` relative path wiped by git clone | Use `../files/` bind mount or File Mount in UI |
+| `JwtStrategy requires a secret or key` | JWT env var not injected | Add `env_file: - .env` or explicit `- JWT_SECRET=${JWT_SECRET}`; **Redeploy** (not Restart) |
+| `ENOENT: no such file or directory` | Config file not mounted | Use File Mount in Advanced → Mounts, or `../files/` bind mount |
+| `permission denied` on volume | Old volume from different user | Rename volume (e.g., `data-v2`) to force fresh creation |
+| Container `is unhealthy` | Wrong healthcheck for image | Match healthcheck command to image type; see Part 6 |
+| Logs/metrics missing in Dokploy | `container_name:` set on service | Remove `container_name:` — it breaks Dokploy's monitoring |
+| Services can't see each other after adding domain | Not on same network | Use Isolated Deployments, or manually add `dokploy-network` to all services |
 
 ---
 
-## Part 9: Deployment SOPs
+## Part 9: Reference Files
 
-For detailed step-by-step guides, see:
-- `references/sop-compose-deployment.md` — deploying any multi-service Compose stack
+- `references/sop-compose-deployment.md` — step-by-step SOP for any multi-service Compose stack
 - `references/sop-git-deployment.md` — deploying from Git with Dockerfile
-- `references/librechat-example.md` — LibreChat specific patterns (JWT, MongoDB networking, librechat.yaml)
-- `references/signoz-example.md` — SigNoz specific patterns (init containers, ClickHouse, Zookeeper migration)
+- `references/librechat-example.md` — LibreChat: JWT secrets, MongoDB DNS, librechat.yaml mounting
+- `references/signoz-example.md` — SigNoz: init containers, ClickHouse, Zookeeper migration
 - `references/init-container-patterns.md` — init container patterns with heredocs and binary downloads
 
 ---
 
-## Quick Reference: Converted docker-compose.yml Checklist
+## Quick Checklist: Adapting any docker-compose.yml for Dokploy
 
-When adapting any docker-compose.yml for Dokploy:
-
-- [ ] Replace all relative bind mounts (`./data`) with named volumes
-- [ ] Remove `user: "${UID}:${GID}"` lines (causes permission errors in Dokploy)
-- [ ] Move secrets from `.env` file to Dokploy Environment tab
-- [ ] Reference env vars as `${VAR_NAME}` in compose YAML
-- [ ] Add healthchecks to all database/dependency services
-- [ ] Change `depends_on: service` to `depends_on: service: condition: service_healthy`
-- [ ] For config files: use File Mounts or init container pattern
-- [ ] Add custom network if experiencing DNS issues
-- [ ] Use absolute paths (`/opt/myapp/`) not relative paths (`./`) for bind mounts
-- [ ] Declare all named volumes at the bottom of the file
+- [ ] **Remove all `container_name:`** — breaks Dokploy logs and metrics
+- [ ] **Replace `./` relative bind mounts** with `../files/` or named volumes
+- [ ] **No absolute host paths** (`/opt/...`) — they get cleaned up on deploy
+- [ ] **Remove `user: "${UID}:${GID}"`** — causes permission errors in Dokploy
+- [ ] **Remove `env_file: - ./.env`** — file won't exist; use `env_file: - .env` (no `./`) or `${VAR}` syntax
+- [ ] **Add `env_file: - .env`** OR explicit `${VAR}` refs for every secret — env vars aren't auto-injected
+- [ ] **Add healthchecks** to all database/dependency services
+- [ ] **Update `depends_on`** to use `condition: service_healthy` instead of just service name
+- [ ] **For domains**: use Dokploy's Domains tab (Method 1) unless you need custom Traefik config
+- [ ] **Use `expose:`** (not `ports:`) for services routed via Traefik domain
+- [ ] **Declare all named volumes** at the bottom of the file

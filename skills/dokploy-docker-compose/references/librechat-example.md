@@ -14,7 +14,6 @@ LibreChat is a multi-service stack:
 ```yaml
 services:
   api:
-    container_name: LibreChat
     image: ghcr.io/danny-avila/librechat-dev:latest
     restart: always
     extra_hosts:
@@ -24,18 +23,15 @@ services:
         condition: service_healthy
       rag_api:
         condition: service_started
+    env_file:
+      - .env        # loads all vars from Dokploy's Environment tab
     environment:
       - HOST=0.0.0.0
       - NODE_ENV=production
-      - MONGO_URI=${MONGO_URI:-mongodb://chat-mongodb:27017/LibreChat}
+      - MONGO_URI=mongodb://mongodb:27017/LibreChat
       - MEILI_HOST=http://meilisearch:7700
-      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY}
       - RAG_PORT=${RAG_PORT:-8000}
       - RAG_API_URL=http://rag_api:${RAG_PORT:-8000}
-      - JWT_SECRET=${JWT_SECRET}
-      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
-      - CREDS_KEY=${CREDS_KEY}
-      - CREDS_IV=${CREDS_IV}
     volumes:
       - librechat-images:/app/client/public/images
       - librechat-uploads:/app/uploads
@@ -44,7 +40,6 @@ services:
       - librechat-net
 
   mongodb:
-    container_name: chat-mongodb
     image: mongo:8.0.17
     restart: always
     command: mongod --noauth
@@ -60,7 +55,6 @@ services:
       - librechat-net
 
   meilisearch:
-    container_name: chat-meilisearch
     image: getmeili/meilisearch:v1.12.3
     restart: always
     environment:
@@ -73,7 +67,6 @@ services:
       - librechat-net
 
   vectordb:
-    container_name: vectordb
     image: pgvector/pgvector:0.8.0-pg15-trixie
     restart: always
     environment:
@@ -86,15 +79,15 @@ services:
       - librechat-net
 
   rag_api:
-    container_name: rag_api
     image: ghcr.io/danny-avila/librechat-rag-api-dev-lite:latest
     restart: always
     depends_on:
       - vectordb
+    env_file:
+      - .env
     environment:
       - DB_HOST=vectordb
       - RAG_PORT=${RAG_PORT:-8000}
-      - JWT_SECRET=${JWT_SECRET}
     networks:
       - librechat-net
 
@@ -151,21 +144,17 @@ error: Config file YAML format is invalid: ENOENT: no such file or directory, op
 (Note: this error does not crash the app if JWT is set — it's a warning)
 
 **Option A — File Mount in Dokploy:**
-Advanced → Volumes → File Mount:
+Advanced → **Mounts** → File Mount:
 - **Content**: (paste YAML below)
 - **File Path**: `librechat.yaml`
 - **Mount Path**: `/app/librechat.yaml`
 
-**Option B — Bind mount from VPS:**
-```bash
-# SSH into VPS
-nano /etc/dokploy/librechat.yaml
-# paste config
-```
-Then in Compose YAML volumes section of `api` service:
+**Option B — `../files/` bind mount (from Dokploy's persistent files folder):**
+In your compose YAML, under `api` service volumes:
 ```yaml
-- /etc/dokploy/librechat.yaml:/app/librechat.yaml
+- ../files/librechat.yaml:/app/librechat.yaml
 ```
+SSH to VPS once to create the file in the `files` directory alongside your compose deployment.
 
 **Minimal librechat.yaml content:**
 ```yaml
@@ -202,7 +191,8 @@ unauthorized signups.
 ### `getaddrinfo EAI_AGAIN mongodb`
 → Race condition — api started before mongodb was ready
 → Fix: add `healthcheck` to mongodb and `depends_on: condition: service_healthy` to api
-→ Or: try changing `MONGO_URI` to use `chat-mongodb` (container_name) instead of `mongodb`
+→ This stack uses a `librechat-net` custom network which ensures reliable DNS by service name
+→ Do NOT use `container_name:` as a DNS workaround — it breaks Dokploy monitoring
 
 ### `EACCES permission denied` on uploads/logs
 → Remove `user: "${UID}:${GID}"` from compose — let Docker run as root

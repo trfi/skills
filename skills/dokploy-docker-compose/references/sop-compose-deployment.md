@@ -9,81 +9,104 @@
 
 Before pasting into Dokploy, apply these transformations to any docker-compose.yml:
 
-### 1. Replace relative bind mounts with named volumes
+### 1. Remove `container_name:` from all services
 
-Before (will fail in Dokploy):
+**Critical:** Setting `container_name:` breaks Dokploy's logs, metrics, and monitoring features.
+
+Before:
 ```yaml
-volumes:
-  - ./data:/app/data
-  - ./logs:/app/logs
+services:
+  mongodb:
+    container_name: chat-mongodb   # remove this
 ```
 
 After:
 ```yaml
-volumes:
-  - myapp-data:/app/data
-  - myapp-logs:/app/logs
+services:
+  mongodb:
+    image: mongo:8.0.17            # no container_name
 ```
 
-And at the bottom of the file:
+### 2. Replace relative bind mounts — use `../files/` or named volumes
+
+These will break or become empty after AutoDeploy:
 ```yaml
 volumes:
-  myapp-data:
-  myapp-logs:
+  - ./data:/app/data          # wiped by git clone on each deploy
+  - ./config.yaml:/app/config # wiped by git clone on each deploy
+  - /opt/myapp:/app/data      # absolute path cleaned up by Dokploy
 ```
 
-### 2. Remove user directives
+Use `../files/` for bind mounts that need to survive deploys:
+```yaml
+volumes:
+  - ../files/my-data:/app/data
+  - ../files/my-logs:/app/logs
+```
+
+Or use named volumes for databases and large datasets:
+```yaml
+volumes:
+  - myapp-data:/app/data
+
+# At bottom of file:
+volumes:
+  myapp-data:
+```
+
+### 3. Remove user directives
 ```yaml
 # Remove this line — causes EACCES permission errors in Dokploy
 user: "${UID}:${GID}"
 ```
 
-### 3. Extract secrets to Dokploy's Environment tab
-
-Before:
-```yaml
-environment:
-  - MONGO_URI=mongodb://admin:secret123@mongodb:27017/db
-```
-
-After (in docker-compose.yml):
-```yaml
-environment:
-  - MONGO_URI=${MONGO_URI}
-```
-
-Then in Dokploy → Environment tab, add:
-```
-MONGO_URI=mongodb://admin:secret123@mongodb:27017/db
-```
-
-### 4. Remove `.env` file references
+### 4. Fix env file references and add secrets to Dokploy's Environment tab
 
 Before:
 ```yaml
 env_file:
-  - ./.env
+  - ./.env      # ./ prefix causes issues; file also won't exist if using raw compose
 ```
 
-After: Delete this block. Add all variables to Dokploy's Environment tab instead.
+After — Option A (load everything, recommended for many vars):
+```yaml
+env_file:
+  - .env        # no ./ prefix — Dokploy writes vars to .env in compose directory
+```
+
+After — Option B (select specific vars):
+```yaml
+environment:
+  - MONGO_URI=${MONGO_URI}
+  - JWT_SECRET=${JWT_SECRET}
+```
+
+Add all required values in Dokploy → **Environment tab**.
 
 ### 5. Handle config file mounts
 
 Before:
 ```yaml
 volumes:
-  - ./config.yaml:/app/config.yaml
+  - ./config.yaml:/app/config.yaml   # wiped on each git clone
 ```
 
-After (two options):
+After (three options, in order of preference):
 
-**Option A — File Mount (small text configs, recommended):**
-Delete the bind mount line. Go to Advanced → Volumes → File Mount:
+**Option A — `../files/` bind mount (persistent, survives deploys):**
+```yaml
+volumes:
+  - ../files/app-config/config.yaml:/app/config.yaml
+```
+SSH to VPS once to create the file: `mkdir -p ~/dokploy-files/app-config && nano ~/dokploy-files/app-config/config.yaml`
+
+**Option B — File Mount in Dokploy UI (no SSH needed for small configs):**
+Delete the bind mount line. Go to Advanced → Mounts → File Mount:
 - Content: [paste file content]
 - File Path: `config.yaml`
 - Mount Path: `/app/config.yaml`
 
-**Option B — Init Container (complex/multiple configs or binaries):**
+**Option C — Init Container (complex/multiple configs or binaries needed):**
 See `init-container-patterns.md`
 
 ---
@@ -101,9 +124,15 @@ See `init-container-patterns.md`
 
 ## Phase 3: Configure Environment Variables
 
+**How Dokploy env vars work:** Variables you add in the Environment tab are written to a `.env`
+file. They are **NOT automatically injected** into containers — you must explicitly load them.
+
 1. Go to **Environment** tab of the stack
 2. Add all required variables (one per line, `KEY=VALUE` format)
 3. Click **Save**
+4. In your compose YAML, load them using one of:
+   - `env_file: - .env` on each service (loads all vars — easiest for many secrets)
+   - `environment: - MY_VAR=${MY_VAR}` per service (explicit, loads only what you list)
 
 ---
 
@@ -130,7 +159,7 @@ See `init-container-patterns.md`
 
 ## Phase 6: Configure Domain (Optional)
 
-For web apps that need a public URL:
+For web apps that need a public URL (recommended approach since v0.7.0):
 1. Find the web service in the container list
 2. Go to **Domains** tab
 3. Click **Add Domain**
@@ -138,6 +167,22 @@ For web apps that need a public URL:
 5. **Container Port**: the app's internal listening port (e.g., `3000`, `8080`)
 6. Enable HTTPS if you have DNS configured
 7. Click **Create**
+
+Dokploy automatically injects Traefik labels into the compose file. You don't need to add them manually.
+Use **Preview Compose** to see what the final file will look like before deploying.
+
+In your compose YAML, use `expose:` instead of `ports:` for services routed via Traefik:
+```yaml
+services:
+  app:
+    expose:
+      - 3000    # Traefik will route to this; no host port needed
+```
+
+### Isolated Deployments (for multiple instances or better isolation)
+If you need to run the same app more than once (e.g., two WordPress sites), enable
+**Isolated Deployments** in the Dokploy UI. This creates a private per-app network and avoids
+service name conflicts on `dokploy-network`.
 
 ---
 
