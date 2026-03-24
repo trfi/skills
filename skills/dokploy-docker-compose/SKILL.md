@@ -249,7 +249,7 @@ healthcheck:
 ### Port configuration
 ```yaml
 ports:
-  - "8081:8080"    # host:container — exposes to internet
+  - "8080:8080"    # host:container — exposes to internet
 ```
 In Dokploy UI (Advanced → Ports):
 - **Published Port**: host port (external)

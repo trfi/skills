@@ -231,7 +231,7 @@ services:
       - SIGNOZ_SQLSTORE_SQLITE_PATH=/var/lib/signoz/signoz.db
       - SIGNOZ_TOKENIZER_JWT_SECRET=${SIGNOZ_JWT_SECRET:-secret}
     ports:
-      - 8081:8080
+      - 8080:8080
     restart: unless-stopped
     volumes:
       - signoz-sqlite:/var/lib/signoz
@@ -262,8 +262,8 @@ services:
       - SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_DSN=tcp://clickhouse:9000
       - SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_CLUSTER=cluster
     ports:
-      - 43170:4317  # OTLP gRPC receiver
-      - 43180:4318  # OTLP HTTP receiver
+      - 4317:4317  # OTLP gRPC receiver
+      - 4318:4318  # OTLP HTTP receiver
     restart: unless-stopped
 
 volumes:
@@ -284,7 +284,7 @@ SIGNOZ_JWT_SECRET=<any random string>
 
 1. Deploy the stack
 2. Wait for all containers to go green (~2-3 minutes)
-3. Access UI at `http://<server-ip>:8081`
+3. Access UI at `http://<server-ip>:8080`
 4. You'll see: `cannot create agent without orgId` in logs — this is **normal**
 5. Complete organization/admin setup in the UI
 6. Once org is created, the log error disappears automatically
@@ -293,9 +293,9 @@ SIGNOZ_JWT_SECRET=<any random string>
 
 | Port | Service | Purpose |
 |------|---------|---------|
-| 8081 | signoz | Web UI (mapped from internal 8080) |
-| 43170 | signoz-otel-collector | OTLP gRPC receiver (apps send traces here) |
-| 43180 | signoz-otel-collector | OTLP HTTP receiver (apps send traces here) |
+| 8080 | signoz | Web UI (mapped from internal 8080) |
+| 4317 | signoz-otel-collector | OTLP gRPC receiver (apps send traces here) |
+| 4318 | signoz-otel-collector | OTLP HTTP receiver (apps send traces here) |
 
 ## Connecting Apps to SigNoz
 
@@ -308,7 +308,7 @@ import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentation
 
 const sdk = new NodeSDK({
   traceExporter: new OTLPTraceExporter({
-    url: 'http://<server-ip>:43180/v1/traces',
+    url: 'http://<server-ip>:4318/v1/traces',
   }),
   instrumentations: [getNodeAutoInstrumentations()],
   serviceName: 'my-service-name',
