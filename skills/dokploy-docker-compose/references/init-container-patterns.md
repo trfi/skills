@@ -74,6 +74,15 @@ services:
 
 This pattern is used by SigNoz to download the `histogramQuantile` binary for ClickHouse:
 
+> **Supply-chain security note:** Downloading and executing binaries at runtime from external
+> URLs (GitHub releases) is an intentional architectural choice when the binary isn't available
+> in a container image. To minimize risk:
+> - **Pin the version explicitly** (never use `latest` or a floating tag in the URL)
+> - **Verify the checksum** against the release's published SHA256 if one is provided
+> - **Prefer a pre-built image** over runtime downloads whenever the vendor offers one
+> - The `alpine` init container runs once and exits - the downloaded binary is never re-fetched
+>   after the volume is populated on first deploy
+
 ```yaml
 services:
   ch-conf:
@@ -90,12 +99,14 @@ services:
         
         # Download binary
         apk add --no-cache wget tar
-        version="v1.0.0"
+        version="v1.0.0"   # pin to a specific, known-good release
         # Use $$ to escape shell vars from Docker Compose interpolation
         node_os=$$(uname -s | tr '[:upper:]' '[:lower:]')
         node_arch=$$(uname -m | sed s/aarch64/arm64/ | sed s/x86_64/amd64/)
         cd /tmp
         wget -O tool.tar.gz "https://github.com/owner/repo/releases/download/$${version}/tool_$${node_os}_$${node_arch}.tar.gz"
+        # Optional: verify checksum (replace <expected_sha256> with the value from the release page)
+        # echo "<expected_sha256>  tool.tar.gz" | sha256sum -c
         tar -xzf tool.tar.gz
         mv tool /scripts/myTool
         chmod +x /scripts/myTool

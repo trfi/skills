@@ -143,12 +143,16 @@ services:
           <max_partition_size_to_drop>0</max_partition_size_to_drop>
         </clickhouse>
         XML
-        version="v0.0.1"
+        # Supply-chain note: version is pinned; verify SHA256 from the GitHub release page
+        # before deploying to production (sha256sum -c histogram-quantile.tar.gz.sha256)
+        version="v0.0.1"   # pin to a specific, known-good release
         node_os=$$(uname -s | tr '[:upper:]' '[:lower:]')
         node_arch=$$(uname -m | sed s/aarch64/arm64/ | sed s/x86_64/amd64/)
         apk add --no-cache wget tar
         cd /tmp
         wget -O histogram-quantile.tar.gz "https://github.com/SigNoz/signoz/releases/download/histogram-quantile%2F$${version}/histogram-quantile_$${node_os}_$${node_arch}.tar.gz"
+        # Optional: verify checksum (replace <sha256> with value from release page)
+        # echo "<sha256>  histogram-quantile.tar.gz" | sha256sum -c
         tar -xvzf histogram-quantile.tar.gz
         mv histogram-quantile /scripts/histogramQuantile
         chmod +x /scripts/histogramQuantile

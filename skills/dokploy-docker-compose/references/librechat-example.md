@@ -14,7 +14,7 @@ LibreChat is a multi-service stack:
 ```yaml
 services:
   api:
-    image: ghcr.io/danny-avila/librechat-dev:latest
+    image: ghcr.io/danny-avila/librechat-dev:v0.8.4
     restart: always
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -28,7 +28,7 @@ services:
     environment:
       - HOST=0.0.0.0
       - NODE_ENV=production
-      - MONGO_URI=mongodb://mongodb:27017/LibreChat
+      - MONGO_URI=mongodb://${MONGO_USER}:${MONGO_PASS}@mongodb:27017/LibreChat?authSource=admin
       - MEILI_HOST=http://meilisearch:7700
       - RAG_PORT=${RAG_PORT:-8000}
       - RAG_API_URL=http://rag_api:${RAG_PORT:-8000}
@@ -42,7 +42,9 @@ services:
   mongodb:
     image: mongo:8.0.17
     restart: always
-    command: mongod --noauth
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USER}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASS}
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
@@ -55,7 +57,7 @@ services:
       - librechat-net
 
   meilisearch:
-    image: getmeili/meilisearch:v1.12.3
+    image: getmeili/meilisearch:v1.35.1
     restart: always
     environment:
       - MEILI_HOST=http://meilisearch:7700
@@ -70,16 +72,16 @@ services:
     image: pgvector/pgvector:0.8.0-pg15-trixie
     restart: always
     environment:
-      POSTGRES_DB: mydatabase
-      POSTGRES_USER: myuser
-      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: ${VECTORDB_DB:-mydatabase}
+      POSTGRES_USER: ${VECTORDB_USER}
+      POSTGRES_PASSWORD: ${VECTORDB_PASS}
     volumes:
       - vectordb-data:/var/lib/postgresql/data
     networks:
       - librechat-net
 
   rag_api:
-    image: ghcr.io/danny-avila/librechat-rag-api-dev-lite:latest
+    image: ghcr.io/danny-avila/librechat-rag-api-dev-lite:v0.7.3
     restart: always
     depends_on:
       - vectordb
@@ -115,6 +117,14 @@ JWT_REFRESH_SECRET=<run: openssl rand -hex 32>
 CREDS_KEY=<exactly 64 hex chars — run: openssl rand -hex 32>
 CREDS_IV=<exactly 32 hex chars — run: openssl rand -hex 16>
 
+# MongoDB auth (must match values in compose)
+MONGO_USER=librechat
+MONGO_PASS=<run: openssl rand -hex 24>
+
+# pgvector (vectordb) credentials
+VECTORDB_USER=raguser
+VECTORDB_PASS=<run: openssl rand -hex 24>
+
 # Meilisearch
 MEILI_MASTER_KEY=<any random string>
 ```
@@ -122,7 +132,8 @@ MEILI_MASTER_KEY=<any random string>
 **CREDS_KEY and CREDS_IV explained:**
 - Used to AES-encrypt user API keys (OpenAI, Claude, etc.) before storing in MongoDB
 - If lost, all stored API keys become unreadable — users must re-enter them
-- Never change these after users have saved keys
+- Never change these after users have saved keys — rotating them invalidates all stored API keys
+- Treat them as long-lived secrets — store them in a password manager alongside your deployment
 - CREDS_KEY = 64 hex chars (32 bytes) — AES-256 key
 - CREDS_IV = 32 hex chars (16 bytes) — initialization vector
 
@@ -192,7 +203,10 @@ unauthorized signups.
 → Do NOT use `container_name:` as a DNS workaround — it breaks Dokploy monitoring
 
 ### `EACCES permission denied` on uploads/logs
-→ Remove `user: "${UID}:${GID}"` from compose — let Docker run as root
+→ Remove `user: "${UID}:${GID}"` from compose — this is a **Dokploy-specific workaround** for
+  stacks that hardcode a non-root UID from the dev environment. The LibreChat image handles
+  its own filesystem permissions internally. Only apply this if you see the error; don't add
+  it pre-emptively to stacks that don't need it.
 
 ### RAG API warning on startup
 → Normal if app just restarted — rag_api starts slower than api
