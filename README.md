@@ -35,6 +35,7 @@ npx skills add trfi/skills
 ```bash
 # CV/Resume skill
 npx skills add trfi/skills@cv-resume
+bunx skills add trfi/skills@cv-resume
 
 # Dokploy Docker Compose skill
 npx skills add trfi/skills@dokploy-docker-compose
