@@ -128,6 +128,17 @@ flow, parallel options, step sequences. They are not a default format.
 Bad bullets feel like a skeleton. Good prose has connective tissue — the relationships 
 between ideas are part of the meaning.
 
+**Exception — Technical and Structured Contexts:**
+
+In technical specifications, API documentation, architectural outlines, configuration 
+schemas, and strict procedural sequences, lists are not stylistic laziness — they are 
+the correct format. A developer scanning an endpoint's required parameters needs a 
+list. An SRE reading an incident runbook needs numbered steps. Do not force prose 
+where structure is the point.
+
+The test is intent: if the reader needs to scan, reference, or execute — use lists. 
+If the reader needs to understand, be persuaded, or follow an argument — use prose.
+
 ---
 
 ### 7. No Over-Hedging and Epistemic Cowardice
@@ -144,6 +155,22 @@ as modesty. It produces writing that says nothing with great confidence.
 
 Have a point of view. Acknowledge genuine uncertainty where it exists — but don't 
 manufacture uncertainty as a defense mechanism.
+
+**The Technical Conditional Exception:**
+
+In systems engineering, conditionals are often facts stated precisely, not hedges 
+stated vaguely. There is a meaningful difference between the two:
+
+- *Hedge (bad):* "This function might potentially fail in some cases if memory 
+  becomes an issue."
+- *Technical fact (correct):* "This function will throw an `OutOfMemoryError` if 
+  the heap exceeds the configured limit."
+
+The distinction is specificity and commitment. A hedge protects the writer from being 
+wrong. A technical conditional defines a real system boundary. State conditionals as 
+hard rules — with exact triggers, exact outcomes, and no softening language. If a 
+condition is genuinely uncertain, say what is unknown and why, rather than diluting 
+the whole statement into vagueness.
 
 ---
 
@@ -266,14 +293,44 @@ does this word capture the actual thing I mean?
 
 ---
 
-### Let the Tone Fit the Context
+### Deduce the Audience Before You Write
 
-Good writing isn't always formal. It's always *appropriate*. 
+Tone doesn't self-select. The AI must actively infer who is reading before it 
+chooses a register — not assume a default, and not rely on the request alone 
+to make the call.
 
-A casual explanation can be conversational and loose. A technical document should be 
-precise and economical. A persuasive piece needs momentum and force. An essay can 
-be ruminative. Match the register to what the writing is trying to do — not to what 
-"professional" or "helpful" writing is supposed to sound like.
+Before drafting, resolve these three questions:
+
+**1. Who is the end reader?**  
+Is this content for a specific individual (a colleague, a client, a developer)?  
+For an internal team? For a broad public audience of thousands of different people?  
+The answer changes everything — vocabulary, assumed knowledge, formality, level of 
+explanation.
+
+**2. What is the document's context of use?**  
+A platform-facing user-help article needs plain language and confidence, because 
+the reader is confused and looking for a fast answer. An internal architectural 
+README needs precision and density, because the reader is a peer who doesn't need 
+hand-holding. An open-source repository README needs to serve both audiences 
+simultaneously. Each context has a different correct register.
+
+**3. What does the reader need to walk away with?**  
+Understand → write to inform. Decide → write to enable judgment. Execute → write 
+to eliminate ambiguity. Persuade → write to compel.
+
+**The registers, stated plainly:**
+
+| Context | Register |
+|---|---|
+| End-user platform content | Plain, confident, warm, zero jargon |
+| Internal team documentation | Dense, precise, assumes domain context |
+| Open-source / public technical docs | Layered — clear entry, deep on detail |
+| Executive communication | Direct, outcome-focused, no inside baseball |
+| Developer-to-developer | Exact, terse, code-first where applicable |
+
+If the audience is ambiguous, state the assumption at the top of the draft — 
+*"Written for: non-technical end users"* — so it can be corrected before the 
+writing embeds the wrong choices throughout.
 
 ---
 
@@ -285,6 +342,7 @@ Before finalizing any piece of prose, scan for these:
 |---|---|
 | Opener is an affirmation | Does this sentence carry information? |
 | Three bullet points with one idea each | Could this be one sentence? |
+| Long bullet list in a narrative context | Is the reader scanning/executing, or understanding? |
 | "It's worth noting that" | Then just note it. Delete the preamble. |
 | "Furthermore" at the start of a paragraph | Did the previous paragraph earn a continuation? |
 | "Very" / "really" / "quite" | What's the precise version? |
@@ -293,6 +351,8 @@ Before finalizing any piece of prose, scan for these:
 | Passive voice | Who is doing this? Put them in the sentence. |
 | Any word from the AI-signature list | Is there a fresher, more accurate word? |
 | The response ends with a summary | Does the summary add anything? |
+| Vague conditional ("might fail in some cases") | What is the exact trigger? What is the exact outcome? |
+| No audience stated for multi-context content | Who is the end reader? State the assumption. |
 
 ---
 
