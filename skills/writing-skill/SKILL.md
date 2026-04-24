@@ -1,14 +1,14 @@
 ---
 name: writing-skill
 description: >
-  Apply this skill to govern the AI's writing style for any task involving prose,  
-  explanations, creative writing, emails, essays, summaries, social content, or  
-  narrative output. Use it whenever the goal is to produce writing that sounds  
-  genuinely human, confident, and intelligent — and specifically to eliminate the  
-  hollow, mechanical patterns that make AI writing instantly recognizable. Trigger  
-  this skill for any request involving: drafting, editing, rewriting, explaining  
-  in plain language, storytelling, professional communication, blog posts,  
-  documentation, or any task where the quality and authenticity of prose matters.  
+  Apply this skill to govern the AI's writing style for any task involving prose,
+  explanations, creative writing, emails, essays, summaries, social content, or
+  narrative output. Use it whenever the goal is to produce writing that sounds
+  genuinely human, confident, and intelligent — and specifically to eliminate the
+  hollow, mechanical patterns that make AI writing instantly recognizable. Trigger
+  this skill for any request involving: drafting, editing, rewriting, explaining
+  in plain language, storytelling, professional communication, blog posts,
+  documentation, or any task where the quality and authenticity of prose matters.
   If the user has asked for good writing — this skill applies.
 ---
 
@@ -87,16 +87,11 @@ These are chosen for approval, not accuracy. Pick the accurate word.
 
 Bullets are for genuinely list-shaped information. They are not a default format.
 
-**Don't use bullets when:** content flows naturally as prose / fewer than 3 items
+**Don't bullet when:** content flows naturally as prose / fewer than 3 items exist
 (weave them in) / each bullet requires context from the others to make sense.
 
-Bad bullets are skeletons. Prose has connective tissue — the relationships between
-ideas carry meaning.
-
 **Exception — Technical and Structured Contexts:** In specifications, API docs,
-configuration schemas, and procedural sequences, lists are the correct format — not
-laziness. A developer scanning required parameters needs a list. An operator reading
-a runbook needs numbered steps.
+configuration schemas, and procedural sequences, lists are the correct format.
 
 The test: if the reader needs to **scan, reference, or execute** — use lists.
 If the reader needs to **understand, decide, or follow an argument** — use prose.
@@ -105,27 +100,22 @@ If the reader needs to **understand, decide, or follow an argument** — use pro
 
 ### 7. No Over-Hedging and Epistemic Cowardice
 
-Hedging every claim is cowardice dressed as modesty. It produces writing that says
-nothing with great confidence.
+Hedging every claim is cowardice dressed as modesty.
 
 **Kill on sight:** "One could argue..." / "Many people believe..." /
 "This is just my perspective, but..." / "Of course, this varies..." /
 "It's important to note that..." (then just note it)
 
-Have a point of view. Acknowledge genuine uncertainty — but don't manufacture it
-as a defense mechanism.
-
 **Technical Conditional Exception:** In systems engineering, conditionals are facts,
-not hedges. The difference is specificity and commitment:
+not hedges. The difference is specificity:
 
-- *Hedge (wrong):* "This function might potentially fail in some cases if memory
-  becomes an issue."
-- *Technical fact (correct):* "This function throws `OutOfMemoryError` when the
-  heap exceeds the configured limit."
+- *Hedge (wrong):* "This function might fail in some cases if memory becomes an issue."
+- *Technical fact (correct):* "This function throws `OutOfMemoryError` when the heap
+  exceeds the configured limit."
 
 A hedge protects the writer. A technical conditional defines a system boundary.
-State conditionals as hard rules — exact trigger, exact outcome, no softening.
-If something is genuinely uncertain, say precisely what is unknown and why.
+State conditionals with exact trigger and exact outcome. If something is genuinely
+uncertain, say precisely what is unknown and why — don't dilute the whole statement.
 
 ---
 
@@ -133,8 +123,8 @@ If something is genuinely uncertain, say precisely what is unknown and why.
 
 Padding makes writing look thorough without being thorough.
 
-**Kill on sight:** Restating the question before answering / summarizing in the
-next paragraph what was just said / closing paragraphs that recap without adding /
+**Kill on sight:** Restating the question before answering / summarizing in the next
+paragraph what was just said / closing paragraphs that recap without adding /
 explaining the obvious to fill space.
 
 The test: if removing a sentence loses no meaning, remove it.
@@ -143,37 +133,38 @@ The test: if removing a sentence loses no meaning, remove it.
 
 ### 9. No AI-Signature Word Choices
 
-**Use sparingly — find fresher alternatives:**
+These appear at high frequency in generated text precisely because they feel safe and
+slightly elevated. They signal pattern-matching, not genuine word choice.
+
+**Avoid — find specific alternatives:**
 "crucial" / "pivotal" / "vital" / "paramount" / "nuanced" / "multifaceted" /
 "tapestry" / "landscape" (as topic metaphors) / "realm" / "journey" (as metaphor) /
 "testament" / "intricate" / "complex interplay" / "foster" / "cultivate" /
-"underscore" / "highlight" (as meta-verbs about the writing itself)
+"underscore" / "highlight" (as meta-verbs) / "straightforward" / "certainly" /
+"it's worth mentioning" / "at the end of the day" / "I'd be remiss if I didn't"
 
 ---
 
-## Part II — What to Do Instead
+## Part II — Core Principles
 
 ### Lead With the Point, Then Earn It
 
-The first sentence of any response or section should carry the argument, not set it up.
+The first sentence should carry the argument, not set it up.
 
 *Weak:* "There are many factors to consider when thinking about X."
 *Strong:* "X fails when Y — and the reason is almost always Z."
 
-Every paragraph should make a move. If its only function is to transition or add
-context, it hasn't earned its place. Know what each paragraph adds before writing it.
+Every paragraph makes a move. If its only function is to transition or add context,
+it hasn't earned its place.
 
 ---
 
 ### Be Specific. Always.
 
-Vagueness signals the writer doesn't actually know the thing they're describing.
-
 - Not "this can have many effects" — *which* effects, on *what*, under *which* conditions?
 - Not "there are several approaches" — *name them*
 - Not "it depends" — *on what, exactly?*
 
-When you reach for a general statement, find the specific version of it.
 The precise word — including a precise technical term — is always better than the
 safe, broad one.
 
@@ -184,30 +175,15 @@ safe, broad one.
 AI writing has one cadence. Good prose alternates.
 
 Short sentences land hard. Longer sentences — ones that carry subordinate clauses or
-hold tension between competing ideas — create a different kind of attention. The
-rhythm itself is expressive. Then the short one hits. Use this.
+hold tension between competing ideas — create a different kind of attention.
+The rhythm itself is expressive. Then the short one hits. Use this.
 
 ---
 
-### Trust the Reader
+### Deduce the Audience — Then Lock the Register
 
-Don't explain what you're explaining. Don't define terms the reader almost certainly
-knows. Don't soften every claim with a disclaimer. Over-explanation is condescending.
-
-State things at the level the audience can handle — and calibrate that level
-deliberately (see: Deduce the Audience).
-
----
-
-### Deduce the Audience Before Writing
-
-Tone doesn't self-select. Resolve these before drafting:
-
-- **Who is the end reader?** Individual, internal team, or thousands of strangers?
-- **What is the context of use?** Confused end-user needing a fast answer vs. a peer
-  engineer who needs density vs. a mixed public audience.
-- **What must they walk away able to do?** Understand → inform. Decide → enable
-  judgment. Execute → eliminate ambiguity. Convert → compel.
+Don't write, then calibrate. Calibrate, then write. The register table below is the
+decision — match it before drafting, not after.
 
 | Context | Register |
 |---|---|
@@ -219,7 +195,7 @@ Tone doesn't self-select. Resolve these before drafting:
 | Blog / editorial | Conversational, voiced, argument-forward |
 | Website / marketing | Benefit-led, scannable, action-oriented |
 
-If the audience is ambiguous, state the assumption at the top of the draft so it
+If the audience is ambiguous, state the assumption at the top of the draft — so it
 can be corrected before wrong register choices embed throughout.
 
 ---
@@ -235,36 +211,52 @@ Apply the relevant playbook on top of the core rules above.
 **Structure:** Scope statement → Prerequisites → Procedure → Reference
 **Goal:** Zero ambiguity. A reader follows this without needing to ask questions.
 
-- Open with a one-sentence scope statement: what this doc covers and who it's for
-- State prerequisites explicitly before any procedure — never inline or mid-step
-- Number every procedural step. One action per step. No compound steps.
-- Use code blocks for all commands, paths, and values — even single-line ones
-- Define parameters in a table when there are 3 or more: Name / Type / Required / Description
+**Non-obvious rules:**
+- Open with a one-sentence scope statement naming what this doc covers *and who it's
+  for*. Most tech docs skip the audience — readers then self-select incorrectly.
+- Prerequisites belong in a named block *before* the first step, never inline. Burying
+  "Note: you'll need admin access" inside Step 4 is a documentation failure.
+- No compound steps. "Click Save, then confirm the dialog" is two steps. Split them.
+  AIs reliably collapse two actions into one sentence — watch for "then" and "and" 
+  inside a step as the signal.
 - Use callout labels for consequential actions: `NOTE:` `WARNING:` `DANGER:` —
-  especially for irreversible or destructive operations
-- Version-pin language: "As of v2.4..." not "Currently..." (current is a moment, not a version)
-- Write section titles as noun phrases: "Authentication Flow" not "How Auth Works"
-- **Avoid:** tutorial narration ("Now we'll..."), personality, opinion, prose
-  where a table or list is clearer
+  especially for irreversible operations. The label type carries meaning; don't use
+  `NOTE:` for something that will delete data.
+- Version-pin all behavioral claims: "As of v2.4..." not "Currently..." — *current*
+  is a moment. Docs outlive moments.
+- Section title discipline: prefer imperative ("Configure Authentication") over noun
+  phrase ("Authentication Configuration") for procedural sections — it signals to the
+  reader what they *do*, not what the section *is*. Reserve noun phrases for reference
+  sections ("API Reference", "Error Codes").
 
 ---
 
 ### User Guide Documentation
 
-**Structure:** Goal → Steps → Result → What If It Doesn't Work
-**Goal:** A frustrated, confused reader completes the task without re-reading.
+**Structure:** Goal → Steps → Expected Result → Failure Path
+**Goal:** A confused reader completes the task without re-reading a single line.
 
-- Title the guide as the user's goal: "Reset your password" not "Password Reset"
-- Lead sentence states the outcome and time cost: "This takes about 2 minutes and
-  requires access to your registered email."
-- Steps must be atomic — one visible action per step, written as a command:
-  "Click **Save changes**." not "You can now save."
-- After the final step, confirm the expected result: "The green confirmation banner
-  appears at the top of the screen."
-- Address failure: what happens if it doesn't work, and what to do next
-- Write for someone operating under stress or time pressure — every word earns its place
-- **Avoid:** jargon, assumed knowledge, paragraphs inside step sequences,
-  burying the next action at the end of a long sentence
+**Non-obvious rules:**
+- Title the guide as the user's goal in verb form: "Reset your password" not
+  "Password Reset." The difference is who the subject is — the user, not the feature.
+- The lead sentence should state the outcome and any non-obvious prerequisite:
+  "You'll need access to your registered email before starting." Time estimates are
+  optional and should only appear when they're meaningfully long (>10 minutes) —
+  "this takes 2 minutes" on a 90-second task reads as padding.
+- After the final step, always confirm the expected result as a visible UI state:
+  "The green confirmation banner appears at the top of the screen." Without this,
+  users don't know if they succeeded.
+- Address the failure path: what the user sees if it doesn't work, and exactly what
+  to do next. "Contact support" is not a failure path — it's an abdication.
+- **Localization discipline:** User guides are frequently machine-translated. Avoid
+  idioms ("hit the ground running"), avoid contractions in formal step text, use
+  specific numbers over approximations ("wait 3 seconds" not "wait a moment"), and
+  avoid culturally-specific references. These choices cost nothing in English and
+  save significant rework in every other language.
+- Screenshot references belong in the step they illustrate — not above it, not below.
+  Caption every screenshot with what the reader should observe, not what it shows:
+  "The blue Confirm button appears in the lower-right corner" not "The confirmation
+  dialog."
 
 ---
 
@@ -273,20 +265,29 @@ Apply the relevant playbook on top of the core rules above.
 **Structure:** Hook → Value → Evidence → Action
 **Goal:** A scanning stranger stops, understands the offer, and acts.
 
-- Above the fold: one sentence value proposition. No setup, no preamble. The reader
-  must know what this is and why it matters in 5 seconds.
+**Non-obvious rules:**
+- Above the fold: one sentence value proposition, no setup. The reader must know what
+  this is and why it matters in 5 seconds. Test it: cover everything below the first
+  sentence — does the remaining sentence alone earn the scroll?
 - Headlines: benefit-led and specific. "Cut deployment time by 60%" beats "Powerful
-  developer tools." Clever is fine only when it's also clear.
-- Paragraphs: 2–3 sentences maximum. Web readers scan; dense paragraphs are skipped.
-- CTA copy: verb + specific outcome. "Start your free trial" not "Learn more."
-  "Download the guide" not "Get it here."
+  developer tools." Clever is only acceptable when it's also unambiguous.
+- Web paragraphs: 2–3 sentences maximum. Dense paragraphs aren't read — they're skipped.
+- CTA copy is verb + specific outcome: "Start your free trial" not "Learn more."
+  "Download the guide" not "Get it here." "Learn more" is the most common CTA failure —
+  it names the action, not the reward.
 - One primary CTA per page section. Multiple competing CTAs cancel each other.
-- Place social proof (numbers, logos, testimonials) adjacent to the conversion point —
-  not decorative and scattered.
-- SEO: primary keyword in the H1, first paragraph, and at least one H2 — placed
-  naturally, never forced.
-- **Avoid:** hero copy describing the company instead of the reader's problem,
-  jargon in any public-facing copy, clever headlines that sacrifice clarity
+- **Page-type distinctions — these have different structures:**
+  - *Homepage:* who you are + who it's for + single primary CTA. No product detail here.
+  - *Product page:* problem → solution → proof → CTA. Features must serve benefits —
+    never list a feature without stating what it does for the reader.
+  - *Landing page:* single offer, single CTA, no navigation away. Every element either
+    supports the conversion or gets cut.
+  - *Pricing page:* the goal is to remove hesitation, not add information. The
+    recommended tier should be visually obvious. FAQs belong here — they intercept
+    the objection before it becomes a reason to leave.
+- **Meta descriptions:** 150–160 characters. Write them as a pitch, not a summary —
+  sell the click, don't describe the page. Include the primary keyword naturally.
+  Never repeat the page title verbatim. End with an implicit action or payoff.
 
 ---
 
@@ -295,21 +296,72 @@ Apply the relevant playbook on top of the core rules above.
 **Structure:** Lede → Open Loop → Body (scannable H2s) → Payoff Conclusion
 **Goal:** The reader finishes and feels they gained something real.
 
-- **Lede (first 2–3 sentences):** earns attention immediately — a specific claim,
-  a counterintuitive fact, or a concrete scene. Not "In today's world..." Not
-  "X is more important than ever."
-- **Open loop:** make a claim that creates tension the piece then resolves. Not
-  "In this post I'll cover..." — that's a table of contents, not a hook.
-- **H2 structure:** subheadings should tell the story even if body text isn't read.
-  A reader scanning H2s should understand the argument's shape.
-- **Body:** each section proves one thing, then moves. First-person is allowed and
-  often right — it earns authenticity in editorial writing.
-- **Conclusion:** adds something new — a reframe, a challenge, a specific next step.
-  A summary-only conclusion wastes the reader's most attentive moment.
-- **Length:** as long as the argument requires. A tight 400-word piece beats a
-  1,500-word piece that wanders toward the same conclusion.
-- **Avoid:** "In this post I'll cover..." openers / "As we can see..." transitions /
-  H2s that say nothing ("Introduction" / "Conclusion") / ending on vague encouragement
+**Non-obvious rules:**
+- **Lede:** earns attention in the first 2–3 sentences via a specific claim, a
+  counterintuitive fact, or a concrete scene. "In today's world..." and "X has never
+  been more important" are disqualified openings — they cost the reader's trust before
+  the piece begins.
+- **Open loop vs. table of contents:** "In this post I'll cover A, B, and C" is a
+  table of contents. An open loop makes a claim that creates tension the piece then
+  resolves. "Most teams get this backwards — and it costs them more than they realize"
+  is a hook. The first announces; the second pulls.
+- **H2 discipline:** A reader scanning only the H2s should understand the shape of
+  the argument. Test this: strip the body, read only the headings — does the piece
+  still make sense? One H2 every 300–400 words maximum. H2s that say nothing
+  ("Background", "Introduction", "Conclusion") waste the reader's scannability budget.
+- **Body:** each section proves one distinct claim, then moves. First-person is
+  allowed and often right in editorial writing — it earns authenticity. "I" is not
+  a problem; using "I" to avoid making a claim ("I think X might be..." instead of
+  "X is...") is.
+- **Conclusion:** adds a reframe, a challenge, or a specific next step. A
+  conclusion that summarizes wastes the reader's most attentive moment.
+- **Length:** as long as the argument requires. A tight 400-word piece with one real
+  point beats 1,500 words that restates the same point from different angles.
+
+---
+
+## Part IV — Mixed Format and Editing
+
+### Mixed-Format Documents
+
+When a document spans formats — a blog post with an embedded tutorial, a user guide
+with narrative context — the rule is: **format follows the reader's immediate task,
+not the document's primary genre.**
+
+A blog post explaining a technical process should switch to technical doc rules the
+moment the reader needs to execute: numbered steps, exact syntax, expected output.
+Then return to blog register for the surrounding argument. The register shift is
+not a failure of consistency — it's a service to the reader's changing needs.
+
+Signals that a format switch is needed:
+- The reader is about to take an action with a real-world consequence
+- The information needs to be referenced, not just understood
+- The content contains conditional logic ("if X, do Y; if Z, do W")
+
+---
+
+### Editing Existing Content
+
+Editing is not rewriting. The goal is to fix what's broken without replacing what
+works — especially voice.
+
+**Non-obvious rules:**
+- Read 300–500 words of existing content before editing a single word. Calibrate
+  to the author's cadence and idiosyncrasies. Editing that imposes your own rhythm
+  over someone else's is not editing — it's overwriting.
+- Identify the *primary failure mode* first — is the piece too hedged? Wrong register?
+  Padding-heavy? Fix that failure systematically, then stop. Line-editing everything
+  equally regardless of severity produces inconsistent results and buries the real problem.
+- Preserve consistent idiosyncrasies. If the author uses em-dashes heavily, or writes
+  occasional sentence fragments deliberately, or favors "we" throughout — these are
+  voice, not errors. Change them only if they conflict with the document's register
+  requirements.
+- Don't clean up imperfections that carry personality. A conversational aside, an
+  intentional repetition for emphasis, a longer sentence than usual — if it's working,
+  leave it.
+- When editing for a target register (e.g., making internal docs more formal), change
+  *patterns*, not individual words. Find every instance of the problem type, not just
+  the first one.
 
 ---
 
@@ -325,13 +377,15 @@ Apply the relevant playbook on top of the core rules above.
 | A paragraph restates the previous | What does this paragraph *add*? |
 | "This is a complex topic" | Demonstrate the complexity — don't announce it |
 | Passive voice | Who is doing this? Put them in the sentence. |
-| Any AI-signature word | Is there a fresher, more accurate word? |
+| Any AI-signature word | Is there a specific, fresher alternative? |
 | Vague conditional ("might fail in some cases") | Exact trigger? Exact outcome? |
 | Audience unclear | State the assumption at the top before writing |
 | Blog lede starts with "In today's world..." | What's the specific claim or scene? |
 | Website CTA says "Learn more" | Verb + specific outcome — what does clicking do? |
-| User guide step has two actions | Split it — one visible action per step |
+| User guide step contains "then" or "and" | Split it — one visible action per step |
 | Tech doc says "currently" | Pin to a version number instead |
+| Editing imposed own rhythm over author's | Did you read 300+ words before touching anything? |
+| Meta description summarizes the page | Does it sell the click, or just describe content? |
 
 ---
 
