@@ -8,8 +8,16 @@ A collection of custom skills for AI coding assistants (like Claude Code, Cursor
 |-------|-------------|----------|
 | **[cv-resume](skills/cv-resume/SKILL.md)** | Generate professional, ATS-optimized CVs and resumes as HTML. | create, write, build CV/resume |
 | **[dokploy-docker-compose](skills/dokploy-docker-compose/SKILL.md)** | Deploy and troubleshoot Docker Compose stacks on Dokploy (self-hosted VPS platform). Covers volume strategies, networking, env vars, init containers, healthchecks, and common errors. | Dokploy, deploy docker-compose to VPS, self-hosted deployment |
+| **[writing-skill](skills/writing-skill/SKILL.md)** | Improve prose, explanations, documentation, emails, summaries, and narrative output so it reads as clear, confident, human writing. | writing, editing, rewriting, explaining, documentation, blog posts |
 
 ## Example Use Cases
+
+### writing-skill
+
+- *"Rewrite this product announcement so it sounds sharper and less generic."*
+- *"Edit this documentation page for clarity without losing the author's voice."*
+- *"Help me draft a concise executive update about the migration timeline."*
+- *"Turn these rough notes into a blog post with a strong point of view."*
 
 ### dokploy-docker-compose
 
@@ -40,6 +48,10 @@ bunx skills add trfi/skills@cv-resume
 # Dokploy Docker Compose skill
 npx skills add trfi/skills@dokploy-docker-compose
 bunx skills add trfi/skills@dokploy-docker-compose
+
+# Writing skill
+npx skills add trfi/skills@writing-skill
+bunx skills add trfi/skills@writing-skill
 ```
 
 ### Manual Installation
