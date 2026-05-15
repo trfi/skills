@@ -159,14 +159,21 @@ file. They are **NOT automatically injected** into containers — you must expli
 
 ## Phase 6: Configure Domain (Optional)
 
+⚠️ **Do this AFTER the first deploy.** The Domains tab requires a running service to select — you
+cannot add a domain before the service has been deployed at least once.
+
 For web apps that need a public URL (recommended approach since v0.7.0):
 1. Find the web service in the container list
 2. Go to **Domains** tab
 3. Click **Add Domain**
 4. Enter your domain (e.g., `app.yourdomain.com`)
 5. **Container Port**: the app's internal listening port (e.g., `3000`, `8080`)
-6. Enable HTTPS if you have DNS configured
+6. **HTTPS / SSL** — choose based on your DNS setup:
+   - **Direct DNS** (A record pointing to VPS IP): ✅ Enable — Traefik handles Let's Encrypt
+   - **Behind Cloudflare proxy** (orange cloud enabled): ❌ Disable — Cloudflare terminates TLS;
+     enabling causes double-TLS / cert errors. Set Cloudflare SSL/TLS mode to **Full** (not Full Strict).
 7. Click **Create**
+8. Redeploy the service so Traefik picks up the new domain labels
 
 Dokploy automatically injects Traefik labels into the compose file. You don't need to add them manually.
 Use **Preview Compose** to see what the final file will look like before deploying.
