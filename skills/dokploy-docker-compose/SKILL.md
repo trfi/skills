@@ -191,22 +191,11 @@ Dokploy uses Traefik as a reverse proxy. There are two ways to expose services v
 Go to your service → **Domains tab** → **Add Domain**. Dokploy **automatically injects** the
 correct Traefik labels into your compose file at deploy time. You never touch the labels manually.
 
-⚠️ **Domains can only be added AFTER the service has been deployed at least once.** The Domains tab
-requires a running service to select. Always deploy first, then configure the domain.
+⚠️ **Deploy first, then add domain.** The Domains tab requires a running service — you can't add a domain before the first deploy.
 
 - Use `expose:` (not `ports:`) in your compose YAML when routing via domain
 - Use **Preview Compose** button to see the final compose file with auto-injected labels
-
-**HTTPS / SSL setting — depends on your DNS setup:**
-
-| DNS setup | HTTPS setting in Dokploy | Why |
-|-----------|--------------------------|-----|
-| Direct DNS (A record → VPS IP) | ✅ Enable | Dokploy/Traefik handles Let's Encrypt cert |
-| Behind Cloudflare proxy (orange cloud) | ❌ Disable | Cloudflare terminates TLS; enabling causes double-TLS / cert errors |
-
-If using Cloudflare: set SSL/TLS mode to **Full** (not Full Strict) in Cloudflare dashboard, and
-leave HTTPS disabled in Dokploy. Traefik will serve plain HTTP to Cloudflare, which then serves
-HTTPS to the browser.
+- **HTTPS**: enable for direct DNS (A record → VPS); disable if behind Cloudflare proxy (set Cloudflare SSL/TLS to Full)
 
 ```yaml
 services:
